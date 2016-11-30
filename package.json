@@ -8,6 +8,11 @@
     "email": "d4udts@gmail.com",
     "url": "http://deepu105.github.io"
   },
+  "contributors": [{
+    "name": "Hermes Lorenzo",
+    "email": "hermeslm@gmail.com",
+    "url": "https://www.linkedin.com/in/hermeslm"
+  }],
   "files": [
     "generators/app",
     "generators/entity"
@@ -20,6 +25,7 @@
     "Audit",
     "Entity",
     "Entity Audit",
+    "delete behavior",
     "Javers"
   ],
   "dependencies": {

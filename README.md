@@ -1,11 +1,11 @@
 # generator-jhipster-entity-audit [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Dependency Status][daviddm-image]][daviddm-url]
-> JHipster module to enable entity auditing and to add audit log page
+> JHipster module to enable entity auditing, add audit log page and allow to change default delete behavior
 
 ## Usage
 
 This is a [JHipster](http://jhipster.github.io/) module, that is meant to be used in a JHipster application.
 
-You can choose to enable audit for all entities or choose the entities to be audited from a list during generation.
+You can choose to enable audit for all entities or choose the entities to be audited or change default delete behavior from a list during generation.
 
 The module will extend the selected entities and its DTOs with `AbstractAuditingEntity` and `AbstractAuditingDTO` class respectively to enable audits, hence make sure that your entities/DTOs doesn't have any super class.
 
@@ -14,6 +14,8 @@ This will also add new columns to the liquibase changeset for the entities, so i
 The Audit log page is optional and can be added by choosing the option while running the generator
 
 jhipster-entity-audit module will register itself as a hook for Jhipster and the question to enable audit will available during future entity generation as well
+
+It module allow to change the default delete behavior of the entities by simply add a new field named "del_status" as Boolean.
 
 ### [BETA] Javers integration
 
