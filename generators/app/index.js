@@ -39,7 +39,7 @@ module.exports = yeoman.Base.extend({
     },
 
     displayLogo: function () {
-      this.log(chalk.white('Welcome to the ' + chalk.bold('JHipster Entity Audit') + ' Generator! ' + chalk.yellow('v' + packagejs.version + '\n')));
+      this.log(chalk.white('Welcome to the ' + chalk.bold('JHipster Entity Audit and Default delete behavior') + ' Generator! ' + chalk.yellow('v' + packagejs.version + '\n')));
     },
 
     checkJHVersion: function () {
@@ -100,7 +100,19 @@ module.exports = yeoman.Base.extend({
           {name: 'No, let me choose the entities to update', value: 'selected'}
         ],
         default: 'all'
-      },{
+      },
+      {
+        type: 'list',
+        name: 'changeDeleteBehavior',
+        message: 'Do you want to change default delete behavior for generated entities?',
+        choices: [
+          {name: 'Yes, update all', value: 'deleteForAll'},
+          {name: 'No, let me choose the entities to update', value: 'deleteForSelected'}
+        ],
+        default: 'deleteForAll'
+      }
+
+      ,{
         when: function (response) {
           return response.updateType != 'all';
         },

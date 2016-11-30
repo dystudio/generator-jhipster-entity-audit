@@ -15,7 +15,7 @@ The Audit log page is optional and can be added by choosing the option while run
 
 jhipster-entity-audit module will register itself as a hook for Jhipster and the question to enable audit will available during future entity generation as well
 
-It module allow to change the default delete behavior of the entities by simply add a new field named "del_status" as Boolean.
+This module allow to change the default delete behavior of the entities by simply add a new field named "del_status" as Boolean.
 
 ### [BETA] Javers integration
 

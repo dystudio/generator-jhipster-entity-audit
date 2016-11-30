@@ -1,7 +1,7 @@
 {
-  "name": "generator-jhipster-entity-audit",
+  "name": "generator-jhipster-entity-audit-and-delete",
   "version": "2.2.2",
-  "description": "JHipster module to enable entity audit and audit log page",
+  "description": "JHipster module to enable entity audit, add audit log page and allow to change default delete behavior",
   "homepage": "https://github.com/hipster-labs/generator-jhipster-entity-audit",
   "author": {
     "name": "Deepu KS",
@@ -52,7 +52,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hipster-labs/generator-jhipster-entity-audit.git"
+    "url": "git+https://github.com/hermeslm/generator-jhipster-entity-audit"
   },
   "license": "Apache-2.0",
   "bugs": {
