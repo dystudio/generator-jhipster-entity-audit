@@ -1,4 +1,4 @@
-# generator-jhipster-entity-audit [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Dependency Status][daviddm-image]][daviddm-url]
+# generator-jhipster-entity-audit-and-delete [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Dependency Status][daviddm-image]][daviddm-url]
 > JHipster module to enable entity auditing, add audit log page and allow to change default delete behavior
 
 ## Usage
@@ -15,7 +15,7 @@ The Audit log page is optional and can be added by choosing the option while run
 
 jhipster-entity-audit module will register itself as a hook for Jhipster and the question to enable audit will available during future entity generation as well
 
-This module allow to change the default delete behavior of the entities by simply add a new field named "del_status" as Boolean.
+This module allow to change the default delete behavior of the entities by simply add a new field named "del_status" as Boolean, in this case the application never delete from DB instead FrontEnd.  
 
 ### [BETA] Javers integration
 
@@ -32,21 +32,21 @@ As this is a [JHipster](http://jhipster.github.io/) module, we expect you have [
 This module requires Jhipster version greater than 3.0 in order to work
 
 ```bash
-npm install -g generator-jhipster-entity-audit
+npm install -g generator-jhipster-entity-audit-and-delete
 ```
 
 Then run the module on a JHipster generated application:
 
 ```bash
-yo jhipster-entity-audit
+yo jhipster-entity-audit-and-delete
 ```
 
 If you want don't want to answer each question you can use
 
 ```bash
-yo jhipster-entity-audit default
+yo jhipster-entity-audit-and-delete default
 ```
-This will enable auditing for all available entities (only ones created by the jhipster:entity generator) and add the audit log page under admin
+This will enable auditing for all available entities (only ones created by the jhipster:entity generator) add the audit log page under admin and allow to change the default delete behavior
 
 ## License
 
