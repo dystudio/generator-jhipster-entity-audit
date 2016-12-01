@@ -3,6 +3,8 @@ var path = require('path'),
     util = require('util'),
     yeoman = require('yeoman-generator'),
     chalk = require('chalk'),
+    _ = require('lodash'),
+    pluralize = require('pluralize'),
     packagejs = require(__dirname + '/../../package.json'),
     fs = require('fs'),
     semver = require('semver'),
@@ -17,7 +19,11 @@ var jhipsterFunc = {};
 var STRIP_HTML = 'stripHtml',
     STRIP_JS = 'stripJs',
     COPY = 'copy',
-    TPL = 'template'
+    TPL = 'template';
+
+const SERVER_MAIN_SRC_DIR = 'src/main/java/';
+const JHIPSTER_USER_TABLE_NAME = 'jhi_user';
+const INTERPOLATE_REGEX = '/<%:([\s\S]+?)%>/g'; // so that tags in templates do not get mistreated as _ templates
 
 module.exports = yeoman.Base.extend({
 
@@ -45,8 +51,7 @@ module.exports = yeoman.Base.extend({
     checkJHVersion: function () {
       var supportedJHVersion = packagejs.dependencies['generator-jhipster'];
       if (jhipsterVar.jhipsterVersion && !semver.satisfies(jhipsterVar.jhipsterVersion, supportedJHVersion)) {
-        this.env.error(chalk.red.bold('ERROR!') + ` I support only JHipster versions greater than ${supportedJHVersion}...
-          If you want to use Entity Audit with an older JHipster version, download a previous version that supports the required JHipster version.`);
+        this.env.error(chalk.red.bold('ERROR!') + ' I support only JHipster versions greater than ${supportedJHVersion}... If you want to use Entity Audit with an older JHipster version, download a previous version that supports the required JHipster version.');
       }
     },
 
@@ -102,17 +107,6 @@ module.exports = yeoman.Base.extend({
         default: 'all'
       },
       {
-        type: 'list',
-        name: 'changeDeleteBehavior',
-        message: 'Do you want to change default delete behavior for generated entities?',
-        choices: [
-          {name: 'Yes, update all', value: 'deleteForAll'},
-          {name: 'No, let me choose the entities to update', value: 'deleteForSelected'}
-        ],
-        default: 'deleteForAll'
-      }
-
-      ,{
         when: function (response) {
           return response.updateType != 'all';
         },
@@ -126,6 +120,16 @@ module.exports = yeoman.Base.extend({
         name: 'auditPage',
         message: 'Do you want to add an audit log page for entities?',
         default: true
+      },
+      {
+        type: 'list',
+        name: 'changeDeleteBehavior',
+        message: 'Do you want to change default delete behavior for generated entities?',
+        choices: [
+          {name: 'Yes, update all', value: 'deleteForAll'},
+          {name: 'No, let me choose the entities to update', value: 'deleteForSelected'}
+        ],
+        default: 'deleteForAll'
       }
     ];
 
@@ -133,11 +137,13 @@ module.exports = yeoman.Base.extend({
       this.auditFramework = 'custom'
       this.updateType = 'all';
       this.auditPage = true;
+      this.changeDeleteBehavior = 'deleteForAll';
       done();
     } else if(this.javersAudit) {
       this.auditFramework = 'javers'
       this.updateType = 'all';
       this.auditPage = true;
+      this.changeDeleteBehavior = 'deleteForAll';
       done();
     } else {
       this.prompt(prompts, function (props) {
@@ -155,6 +161,7 @@ module.exports = yeoman.Base.extend({
         this.updateType = props.updateType;
         this.auditPage = props.auditPage;
         this.entitiesToUpdate = props.entitiesToUpdate;
+        this.changeDeleteBehavior = props.changeDeleteBehavior;
         done();
       }.bind(this));
     }
@@ -163,6 +170,7 @@ module.exports = yeoman.Base.extend({
   writing: {
     updateYeomanConfig : function() {
       this.config.set('auditFramework', this.auditFramework);
+      this.config.set('changeDeleteBehavior', this.changeDeleteBehavior);
     },
 
     setupGlobalVar : function () {
@@ -176,11 +184,14 @@ module.exports = yeoman.Base.extend({
       this.prodDatabaseType = jhipsterVar.prodDatabaseType;
       this.enableTranslation = jhipsterVar.enableTranslation;
       this.changelogDate = jhipsterFunc.dateFormatForLiquibase();
+      this.searchEngine = jhipsterVar.searchEngine;
       this.webappDir = jhipsterVar.webappDir;
       this.javaTemplateDir = 'src/main/java/package';
+      this.resourcesTemplateDir = 'src/main/resources';
       this.javaDir = jhipsterVar.javaDir;
       this.resourceDir = jhipsterVar.resourceDir;
       this.interpolateRegex = /<%=([\s\S]+?)%>/g; // so that thymeleaf tags in templates do not get mistreated as _ templates
+      this.jhipsterConfigDirectory = '.jhipster';
       this.copyFiles = function (files) {
         files.forEach( function(file) {
           jhipsterFunc.copyTemplate(file.from, file.to, file.type? file.type: TPL, this, file.interpolate? { 'interpolate': file.interpolate } : undefined);
@@ -190,19 +201,29 @@ module.exports = yeoman.Base.extend({
 
     writeBaseFiles : function () {
 
+      if (this.changeDeleteBehavior = 'deleteForAll'){
+          // collect files to copy
+          var files = [
+            {
+              from: this.javaTemplateDir + '/domain/_AbstractAuditingEntity.java',
+              to: this.javaDir + 'domain/AbstractAuditingEntity.java'
+            }
+          ];
+          this.copyFiles(files);
+      }
+
       if (this.auditFramework === 'custom') {
         // collect files to copy
-        var files = [
-          { from: this.javaTemplateDir + '/config/audit/_AsyncEntityAuditEventWriter.java', to: this.javaDir + 'config/audit/AsyncEntityAuditEventWriter.java'},
-          { from: this.javaTemplateDir + '/config/audit/_EntityAuditEventListener.java', to: this.javaDir + 'config/audit/EntityAuditEventListener.java'},
-          { from: this.javaTemplateDir + '/config/audit/_EntityAuditAction.java', to: this.javaDir + 'config/audit/EntityAuditAction.java'},
-          { from: this.javaTemplateDir + '/config/audit/_EntityAuditEventConfig.java', to: this.javaDir + 'config/audit/EntityAuditEventConfig.java'},
-          { from: this.javaTemplateDir + '/domain/_EntityAuditEvent.java', to: this.javaDir + 'domain/EntityAuditEvent.java'},
-          { from: this.javaTemplateDir + '/repository/_EntityAuditEventRepository.java', to: this.javaDir + 'repository/EntityAuditEventRepository.java'},
-          { from: this.javaTemplateDir + '/service/dto/_AbstractAuditingDTO.java', to: this.javaDir + 'service/dto/AbstractAuditingDTO.java'},
-          { from: this.resourceDir + '/config/liquibase/changelog/_EntityAuditEvent.xml',
-                  to: this.resourceDir + 'config/liquibase/changelog/' + this.changelogDate + '_added_entity_EntityAuditEvent.xml', interpolate: this.interpolateRegex }
-        ];
+        var files = [{ from: this.javaTemplateDir + '/config/audit/_AsyncEntityAuditEventWriter.java', to: this.javaDir + 'config/audit/AsyncEntityAuditEventWriter.java'},
+            { from: this.javaTemplateDir + '/config/audit/_EntityAuditEventListener.java', to: this.javaDir + 'config/audit/EntityAuditEventListener.java'},
+            { from: this.javaTemplateDir + '/config/audit/_EntityAuditAction.java', to: this.javaDir + 'config/audit/EntityAuditAction.java'},
+            { from: this.javaTemplateDir + '/config/audit/_EntityAuditEventConfig.java', to: this.javaDir + 'config/audit/EntityAuditEventConfig.java'},
+            { from: this.javaTemplateDir + '/domain/_EntityAuditEvent.java', to: this.javaDir + 'domain/EntityAuditEvent.java'},
+            { from: this.javaTemplateDir + '/repository/_EntityAuditEventRepository.java', to: this.javaDir + 'repository/EntityAuditEventRepository.java'},
+            { from: this.javaTemplateDir + '/service/dto/_AbstractAuditingDTO.java', to: this.javaDir + 'service/dto/AbstractAuditingDTO.java'},
+            { from: this.resourceDir + '/config/liquibase/changelog/_EntityAuditEvent.xml',
+              to: this.resourceDir + 'config/liquibase/changelog/' + this.changelogDate + '_added_entity_EntityAuditEvent.xml', interpolate: this.interpolateRegex }
+          ];
         this.copyFiles(files);
         jhipsterFunc.addChangelogToLiquibase(this.changelogDate + '_added_entity_EntityAuditEvent');
 
@@ -261,6 +282,142 @@ module.exports = yeoman.Base.extend({
 
         this.entitiesToUpdate.forEach(function(entityName) {
           this.auditedEntities.push("\"" + entityName + "\"")
+          //If want to change delete behavior
+          if (this.changeDeleteBehavior = 'deleteForAll'){
+            //We read configuration from file
+            var fileName = this.jhipsterConfigDirectory + '/' + entityName + ".json";
+            this.log(chalk.red.bold('WARN!') + " Var Service: " + fileName);
+            this.fileData = this.fs.readJSON(fileName);
+            //Config Entity data
+            this.dto = this.fileData.dto;
+            if (this.dto != undefined) {
+              this.log(chalk.red.bold('WARN!') + ' dto is missing in .jhipster/${ this.name }.json, using no as fallback\n');
+              this.dto = 'no';
+            }
+            this.entityNameCapitalized = _.upperFirst(entityName);
+            this.entityClass = this.entityNameCapitalized;
+            this.entityInstance = _.lowerFirst(entityName);
+            this.entityClassPlural = pluralize(entityName);
+            this.pagination = this.fileData.pagination;
+            this.entityInstancePlural = pluralize(this.entityInstance);
+            this.relationships = this.fileData.relationships;
+            if (this.databaseType === 'cassandra' || this.databaseType === 'mongodb') {
+              this.pkType = 'String';
+            } else {
+              this.pkType = 'Long';
+            }
+            //load relationship
+            this.fieldsContainOwnerManyToMany = false;
+            this.fieldsContainNoOwnerOneToOne = false;
+            this.fieldsContainOwnerOneToOne = false;
+            this.fieldsContainOneToMany = false;
+            this.fieldsContainManyToOne = false;
+            this.relationships && this.relationships.forEach( function (relationship) {
+              if (_.isUndefined(relationship.relationshipNameCapitalized)) {
+                relationship.relationshipNameCapitalized = _.upperFirst(relationship.relationshipName);
+              }
+
+              if (_.isUndefined(relationship.relationshipNameCapitalizedPlural)) {
+                if (relationship.relationshipName.length > 1) {
+                  relationship.relationshipNameCapitalizedPlural = pluralize(_.upperFirst(relationship.relationshipName));
+                } else {
+                  relationship.relationshipNameCapitalizedPlural = _.upperFirst(pluralize(relationship.relationshipName));
+                }
+              }
+
+              if (_.isUndefined(relationship.relationshipNameHumanized)) {
+                relationship.relationshipNameHumanized = _.startCase(relationship.relationshipName);
+              }
+
+              if (_.isUndefined(relationship.relationshipNamePlural)) {
+                relationship.relationshipNamePlural = pluralize(relationship.relationshipName);
+              }
+
+              if (_.isUndefined(relationship.relationshipFieldName)) {
+                relationship.relationshipFieldName = _.lowerFirst(relationship.relationshipName);
+              }
+
+              if (_.isUndefined(relationship.relationshipFieldNamePlural)) {
+                relationship.relationshipFieldNamePlural = pluralize(_.lowerFirst(relationship.relationshipName));
+              }
+
+              if (_.isUndefined(relationship.otherEntityRelationshipNamePlural) && (relationship.relationshipType === 'one-to-many' || (relationship.relationshipType === 'many-to-many' && relationship.ownerSide === false) || (relationship.relationshipType === 'one-to-one' && relationship.otherEntityName.toLowerCase() !== 'user'))) {
+                relationship.otherEntityRelationshipNamePlural = pluralize(relationship.otherEntityRelationshipName);
+              }
+
+              if (_.isUndefined(relationship.otherEntityRelationshipNameCapitalized)) {
+                relationship.otherEntityRelationshipNameCapitalized = _.upperFirst(relationship.otherEntityRelationshipName);
+              }
+
+              if (_.isUndefined(relationship.otherEntityRelationshipNameCapitalizedPlural)) {
+                relationship.otherEntityRelationshipNameCapitalizedPlural = pluralize(_.upperFirst(relationship.otherEntityRelationshipName));
+              }
+
+              if (_.isUndefined(relationship.otherEntityNamePlural)) {
+                relationship.otherEntityNamePlural = pluralize(relationship.otherEntityName);
+              }
+
+              if (_.isUndefined(relationship.otherEntityNameCapitalized)) {
+                relationship.otherEntityNameCapitalized = _.upperFirst(relationship.otherEntityName);
+              }
+
+              if (_.isUndefined(relationship.otherEntityNameCapitalizedPlural)) {
+                relationship.otherEntityNameCapitalizedPlural = pluralize(_.upperFirst(relationship.otherEntityName));
+              }
+
+              if (_.isUndefined(relationship.otherEntityFieldCapitalized)) {
+                relationship.otherEntityFieldCapitalized = _.upperFirst(relationship.otherEntityField);
+              }
+
+              if (_.isUndefined(relationship.otherEntityStateName)) {
+                relationship.otherEntityStateName = _.trim(_.kebabCase(relationship.otherEntityName), '-') + this.entityAngularJSSuffix;
+              }
+              // Load in-memory data for root
+              if (relationship.relationshipType === 'many-to-many' && relationship.ownerSide) {
+                this.fieldsContainOwnerManyToMany = true;
+              } else if (relationship.relationshipType === 'one-to-one' && !relationship.ownerSide) {
+                this.fieldsContainNoOwnerOneToOne = true;
+              } else if (relationship.relationshipType === 'one-to-one' && relationship.ownerSide) {
+                this.fieldsContainOwnerOneToOne = true;
+              } else if (relationship.relationshipType === 'one-to-many') {
+                this.fieldsContainOneToMany = true;
+              } else if (relationship.relationshipType === 'many-to-one') {
+                this.fieldsContainManyToOne = true;
+              }
+
+              if (relationship.relationshipValidateRules && relationship.relationshipValidateRules.indexOf('required') !== -1) {
+                relationship.relationshipValidate = relationship.relationshipRequired = this.validation = true;
+              }
+
+              var entityType = relationship.otherEntityNameCapitalized;
+              if (this.differentTypes.indexOf(entityType) === -1) {
+                this.differentTypes.push(entityType);
+              }
+            }, this);
+            this.service = this.fileData.service;
+            if (this.service === 'serviceImpl') {
+              //Update Implementation file
+              this.template(this.javaTemplateDir + '/service/_EntityService.java',
+                                    this.javaDir + 'service/' + entityName + 'Service.java', this, {});
+              this.template(this.javaTemplateDir + '/service/impl/_EntityServiceImpl.java',
+                                    this.javaDir + 'service/impl/' + entityName + 'ServiceImpl.java', this, {});
+            }
+            //Update Repository
+            this.template(this.javaTemplateDir + '/repository/_EntityRepository.ejs',
+                          this.javaDir + 'repository/' + entityName + 'Repository.java', this, {});
+            //update liquibase changeset
+            var file = glob.sync(this.resourceDir + "/config/liquibase/changelog/*_added_entity_" + entityName + ".xml")[0];
+            if(file) {
+              var columns = "<column name=\"del_status\" type=\"boolean\" defaultValue=\"false\"/>\n";
+              jhipsterFunc.addColumnToLiquibaseEntityChangeset(file, columns);
+            }
+            //create field "del_status" in user table because it extends from AbstractAuditingEntity
+            var currentDate = jhipsterFunc.dateFormatForLiquibase();
+            this.changelogDate = currentDate;
+            this.userTableName = JHIPSTER_USER_TABLE_NAME;
+            this.template(this.resourcesTemplateDir + '/config/liquibase/changelog/_Add_DelStatus_Column_To_User_Entity.xml',
+                          this.resourceDir + 'config/liquibase/changelog/' + this.changelogDate + '_Add_DelStatus_Column_To_User_Entity.xml', this, {'interpolate': INTERPOLATE_REGEX});
+          }
           if (this.auditFramework === 'custom') {
             // extend entity with AbstractAuditingEntity
             if(!this.fs.read(this.javaDir + 'domain/' + entityName + '.java', {defaults: ''}).includes('extends AbstractAuditingEntity')) {
@@ -285,7 +442,7 @@ module.exports = yeoman.Base.extend({
               "                <constraints nullable=\"false\"/>\n" +
               "            </column>\n" +
               "            <column name=\"last_modified_by\" type=\"varchar(50)\"/>\n" +
-              "            <column name=\"last_modified_date\" type=\"timestamp\"/>";
+              "            <column name=\"last_modified_date\" type=\"timestamp\"/>\n";
               jhipsterFunc.addColumnToLiquibaseEntityChangeset(file, columns);
             }
           } else {
@@ -303,6 +460,7 @@ module.exports = yeoman.Base.extend({
               }
             }
           }
+
         }, this);
       }
     },

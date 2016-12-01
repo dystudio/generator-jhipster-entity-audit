@@ -53,6 +53,7 @@ public class EntityAuditEvent implements Serializable{
     @NotNull
     @Column(name = "modified_date", nullable = false)
     private ZonedDateTime modifiedDate;
+
     <% } else if (auditFramework === 'javers') { %>
     private String id;
 
