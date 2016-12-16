@@ -42,7 +42,7 @@ public interface <%=entityClass%>Repository extends <% if (databaseType=='sql') 
     <%=entityClass%> findOneWithEagerRelationships(@Param("id") Long id);
 
 <% } %>
-    List<<%=entityClass%>> findAllByDelStatusIsTrue();
+    List<<%=entityClass%>> findAllByDelStatusIsFalse();
 }
 <% } %><% if (databaseType == 'cassandra') { %>
 @Repository

@@ -312,6 +312,10 @@ module.exports = yeoman.Base.extend({
             this.fieldsContainOwnerOneToOne = false;
             this.fieldsContainOneToMany = false;
             this.fieldsContainManyToOne = false;
+            this.differentTypes = [this.entityClass];
+            if (!this.relationships) {
+              this.relationships = [];
+            }
             this.relationships && this.relationships.forEach( function (relationship) {
               if (_.isUndefined(relationship.relationshipNameCapitalized)) {
                 relationship.relationshipNameCapitalized = _.upperFirst(relationship.relationshipName);
